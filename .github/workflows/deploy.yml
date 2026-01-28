@@ -1,0 +1,29 @@
+name: Deploy Flask App to EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ai-dev-agent ./app/backend
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker stop ai-dev-agent || true
+            docker rm ai-dev-agent || true
+            docker build -t ai-dev-agent ~/ai-autonomous-devops-agent/app/backend
+            docker run -d -p 8080:8080 --name ai-dev-agent ai-dev-agent

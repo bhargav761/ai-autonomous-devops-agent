@@ -1,0 +1,56 @@
+name: Deploy to EKS using Helm
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: ai-dev-agent
+  EKS_CLUSTER_NAME: ai-devops-cluster
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Checkout code
+    - name: Checkout source
+      uses: actions/checkout@v4
+
+    # 2. Configure AWS credentials
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # 3. Login to ECR
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    # 4. Build & Push Docker image
+    - name: Build and push image
+      run: |
+        docker build -t $ECR_REPOSITORY:${IMAGE_TAG} ./app/backend
+        docker tag $ECR_REPOSITORY:${IMAGE_TAG} \
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${IMAGE_TAG}
+        docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${IMAGE_TAG}
+
+    # 5. Update kubeconfig
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig \
+          --region $AWS_REGION \
+          --name $EKS_CLUSTER_NAME
+
+    # 6. Helm deploy (upgrade or install)
+    - name: Deploy using Helm
+      run: |
+        helm upgrade --install ai-dev-agent ./ai-dev-agent \
+          --set image.repository=${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY \
+          --set image.tag=${IMAGE_TAG}

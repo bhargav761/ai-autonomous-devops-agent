@@ -1,0 +1,30 @@
+replicaCount: 1
+
+image:
+  repository: 816722354600.dkr.ecr.us-east-1.amazonaws.com/ai-dev-agent
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  port: 8080
+
+autoscaling:
+  enabled: false
+
+resources: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+

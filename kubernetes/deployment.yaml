@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-dev-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ai-dev-agent
+  template:
+    metadata:
+      labels:
+        app: ai-dev-agent
+    spec:
+      containers:
+        - name: ai-dev-agent
+          image: 816722354600.dkr.ecr.us-east-1.amazonaws.com/ai-dev-agent:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+
